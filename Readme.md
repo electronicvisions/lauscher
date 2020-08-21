@@ -2,7 +2,7 @@
   <img src=".artwork/logo.png" width="80%" alt="LAUSCHER Logo"/>
 </p>
 
-# LAUSCHER – Flexbile Auditory Spike Conversion Chain
+# LAUSCHER – Flexible Auditory Spike Conversion Chain
 
 If you find this package useful for your scientific work, please consider citing
 ```
