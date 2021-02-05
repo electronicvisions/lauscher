@@ -4,13 +4,17 @@
 
 # LAUSCHER – Flexible Auditory Spike Conversion Chain
 
-If you find this package useful for your scientific work, please consider citing
+If you find this package useful for your scientific work, please consider citing our paper 
+https://ieeexplore.ieee.org/document/9311226
 ```
-@article{cramer2019heidelberg,
-  title={The Heidelberg spiking datasets for the systematic evaluation of spiking neural networks},
-  author={Cramer, Benjamin and Stradmann, Yannik and Schemmel, Johannes and Zenke, Friedemann},
-  journal={arXiv preprint arXiv:1910.07407},
-  year={2019}
+@article{cramer_heidelberg_2020,
+	title = {The {Heidelberg} {Spiking} {Data} {Sets} for the {Systematic} {Evaluation} of {Spiking} {Neural} {Networks}},
+	issn = {2162-2388},
+	doi = {10.1109/TNNLS.2020.3044364},
+	journal = {IEEE Transactions on Neural Networks and Learning Systems},
+	author = {Cramer, B. and Stradmann, Y. and Schemmel, J. and Zenke, F.},
+	year = {2020},
+	pages = {1--14}
 }
 ```
 
