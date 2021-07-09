@@ -81,7 +81,7 @@ class BushyCell(Transformation):
 
     def __call__(self, data: FiringProbability) -> SpikeTrain:
         assert isinstance(data, FiringProbability)
-        np.random.seed(123) # TODO remove after optimization
+        # np.random.seed(123) # TODO remove after optimization
 
         stimuli = []
         for i in range(data.num_channels):
