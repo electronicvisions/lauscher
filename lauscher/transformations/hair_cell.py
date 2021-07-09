@@ -86,8 +86,8 @@ class HairCell(Transformation):
         hair_w = hair_c * self.r / self.x
 
         # TODO find a nicer way of passing all these arguments to the dynamics function
-        kwargs = dict(ymdt=ymdt, xdt=xdt, ydt=ydt, rdt=rdt, gdt=gdt, hdt=hdt, lplusrdt=lplusrdt, kt=kt, hair_c=hair_c, hair_q=hair_q, hair_w=hair_w)
-        return self._dynamics(bm, fs, self.a, self.b, self.m, **kwargs)
+        kwargs = dict(fs=fs, a=self.a, b=self.b, m=self.m, ymdt=ymdt, xdt=xdt, ydt=ydt, rdt=rdt, gdt=gdt, hdt=hdt, lplusrdt=lplusrdt, kt=kt, hair_c=hair_c, hair_q=hair_q, hair_w=hair_w)
+        return self._dynamics(bm, **kwargs)
 
 
     def __call__(self, data: MembraneVelocity) -> FiringProbability:
