@@ -52,9 +52,9 @@ class BushyCell(Transformation):
     def _lif(self, stimuli, fs):
         dt = 1  / float(fs)
 
-        vm = np.zeros(stimuli.shape[0])
         spike_times = [] 
-        isyn = np.zeros(stimuli.shape)
+        vm = 0.0
+        isyn = 0.0
 
         refrac_counter = 0
         n_refrac_samples = self.tau_refrac * fs
@@ -62,22 +62,20 @@ class BushyCell(Transformation):
         scl_mem = np.exp(-dt / self.tau_mem)
         scl_syn = np.exp(-dt / self.tau_syn)
         for step in range(stimuli.shape[0]):
-            if step > 0:
-                if refrac_counter <= 0:
-                    if vm[step - 1] < 1.0:
-                        vm[step] = vm[step - 1] * scl_mem
-                    else:
-                        refrac_counter = n_refrac_samples
-                        vm[step] = 0.0
-                        spike_times.append(step-1)
-                isyn[step, :] = isyn[step - 1] * scl_syn
-            isyn[step, :] += stimuli[step, :]
             if refrac_counter <= 0:
-                vm[step] += np.sum(isyn[step, :]) * self.weight * dt
-            if vm[step] > 1.0:
-                vm[step] = 1.0
-
+                if vm < 1.0:
+                    new_vm = vm * scl_mem
+                else:
+                    refrac_counter = n_refrac_samples
+                    new_vm = 0.0
+                    spike_times.append(step-1)
+            new_isyn = isyn * scl_syn + stimuli[step, :]
+            if refrac_counter <= 0:
+                new_vm += np.sum(new_isyn) * self.weight * dt
+            
+            vm = new_vm
             refrac_counter -= 1
+            isyn = new_isyn
 
         return spike_times
 
@@ -89,7 +87,6 @@ class BushyCell(Transformation):
         for i in range(data.num_channels):
             stimuli.append(self._sample(data.channels[i], data.sample_rate))
         renewal_spikes = np.array(stimuli,dtype=np.bool)
-        print(renewal_spikes.dtype)
 
         with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
             lif_spike_times = workers.map(partial(self._lif, fs=data.sample_rate),
