@@ -87,8 +87,6 @@ class BushyCell(Transformation):
         for i in range(data.num_channels):
             stimuli.append(self._sample(data.channels[i], data.sample_rate))
         renewal_spikes = np.sum(np.array(stimuli,dtype=np.bool),axis=2) # We can do this because we use the same weight for all inputs
-        print(renewal_spikes.shape)
-        print(renewal_spikes.dtype)
 
         with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
             lif_spike_times = workers.map(partial(self._lif, fs=data.sample_rate),
