@@ -53,7 +53,7 @@ class BushyCell(Transformation):
         dt = 1  / float(fs)
 
         vm = np.zeros(stimuli.shape[0])
-        spikes = np.zeros(stimuli.shape[0])
+        spike_times = [] 
         isyn = np.zeros(stimuli.shape)
 
         refrac_counter = 0
@@ -69,7 +69,7 @@ class BushyCell(Transformation):
                     else:
                         refrac_counter = n_refrac_samples
                         vm[step] = 0.0
-                        spikes[step - 1] = 1.0
+                        spike_times.append(step-1)
                 isyn[step, :] = isyn[step - 1] * scl_syn
             isyn[step, :] += stimuli[step, :]
             if refrac_counter <= 0:
@@ -79,18 +79,29 @@ class BushyCell(Transformation):
 
             refrac_counter -= 1
 
-        return spikes
+        return spike_times
 
     def __call__(self, data: FiringProbability) -> SpikeTrain:
         assert isinstance(data, FiringProbability)
+        np.random.seed(123) # TODO remove after optimization
 
-        stimuli = np.ndarray((data.num_channels, data.num_samples,
-                              self.n_convergence))
+        stimuli = []
         for i in range(data.num_channels):
-            stimuli[i] = self._sample(data.channels[i], data.sample_rate)
+            stimuli.append(self._sample(data.channels[i], data.sample_rate))
+        renewal_spikes = np.array(stimuli,dtype=np.bool)
+        print(renewal_spikes.dtype)
 
         with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
-            spike_matrix = workers.map(partial(self._lif, fs=data.sample_rate),
-                                       stimuli)
+            lif_spike_times = workers.map(partial(self._lif, fs=data.sample_rate),
+                                       renewal_spikes)
 
-        return SpikeTrain.from_dense(np.array(spike_matrix), data.sample_rate)
+        times = []
+        units = []
+        for i,ts in enumerate(lif_spike_times):
+            if len(ts):
+                times.extend(ts)
+                units.append(i*np.ones(len(ts),dtype=int))
+        times = np.array(times,dtype=np.float)/data.sample_rate
+        units = np.concatenate(units)
+
+        return SpikeTrain(times,units)
