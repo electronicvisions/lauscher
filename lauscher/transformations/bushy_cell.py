@@ -50,7 +50,7 @@ class BushyCell(Transformation):
         return self._correct(spikes, self.tau_refrac * fs)
 
     def _lif(self, stimuli, fs):
-        dt = 1  / float(fs)
+        dt = float(1.0/fs)
 
         spike_times = [] 
         vm = 0.0
@@ -65,13 +65,13 @@ class BushyCell(Transformation):
             if refrac_counter <= 0:
                 if vm < 1.0:
                     new_vm = vm * scl_mem
-                else:
+                else: # emit spike
                     refrac_counter = n_refrac_samples
                     new_vm = 0.0
                     spike_times.append(step-1)
-            new_isyn = isyn * scl_syn + stimuli[step, :]
+            new_isyn = isyn * scl_syn + stimuli[step]
             if refrac_counter <= 0:
-                new_vm += np.sum(new_isyn) * self.weight * dt
+                new_vm += new_isyn * self.weight * dt
             
             vm = new_vm
             refrac_counter -= 1
@@ -86,7 +86,9 @@ class BushyCell(Transformation):
         stimuli = []
         for i in range(data.num_channels):
             stimuli.append(self._sample(data.channels[i], data.sample_rate))
-        renewal_spikes = np.array(stimuli,dtype=np.bool)
+        renewal_spikes = np.sum(np.array(stimuli,dtype=np.bool),axis=2) # We can do this because we use the same weight for all inputs
+        print(renewal_spikes.shape)
+        print(renewal_spikes.dtype)
 
         with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
             lif_spike_times = workers.map(partial(self._lif, fs=data.sample_rate),
@@ -100,5 +102,11 @@ class BushyCell(Transformation):
                 units.append(i*np.ones(len(ts),dtype=int))
         times = np.array(times,dtype=np.float)/data.sample_rate
         units = np.concatenate(units)
+
+        # Here we sort the spikes in time
+        # TODO remove this sorting step when we have a clean vectorized implementation of _lif
+        idx = np.argsort(times)
+        times = times[idx]
+        units = units[idx]
 
         return SpikeTrain(times,units)
