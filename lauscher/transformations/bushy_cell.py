@@ -52,59 +52,48 @@ class BushyCell(Transformation):
     def _lif(self, stimuli, fs):
         dt = float(1.0/fs)
 
-        spike_times = [] 
-        vm = 0.0
-        isyn = 0.0
+        times = [] 
+        units = [] 
 
-        refrac_counter = 0
+        nb_cells = stimuli.shape[0]
+        refrac_counter = np.zeros(nb_cells)
+        vm = np.zeros(nb_cells)
+        isyn = np.zeros(nb_cells)
+
         n_refrac_samples = self.tau_refrac * fs
 
         scl_mem = np.exp(-dt / self.tau_mem)
         scl_syn = np.exp(-dt / self.tau_syn)
-        for step in range(stimuli.shape[0]):
-            if refrac_counter <= 0:
-                if vm < 1.0:
-                    new_vm = vm * scl_mem
-                else: # emit spike
-                    refrac_counter = n_refrac_samples
-                    new_vm = 0.0
-                    spike_times.append(step-1)
-            new_isyn = isyn * scl_syn + stimuli[step]
-            if refrac_counter <= 0:
-                new_vm += new_isyn * self.weight * dt
+        for step in range(stimuli.shape[1]):
+            spiked = np.logical_and(vm>=1.0,refrac_counter<=0)
+            new_vm = vm * scl_mem
+            refrac_counter[spiked] = n_refrac_samples
+            new_vm[spiked] = 0.0
+            new_isyn = isyn * scl_syn + stimuli[:,step]
+            active = (refrac_counter <= 0)
+            new_vm[active] += new_isyn[active] * self.weight * dt
             
             vm = new_vm
-            refrac_counter -= 1
             isyn = new_isyn
+            refrac_counter -= 1
 
-        return spike_times
+            ids = np.where(spiked)[0]
+            if len(ids):
+                units.append(ids)
+                times.append(step/fs*np.ones(len(ids),dtype=np.int))
+
+        times, units = np.concatenate(times),np.concatenate(units)
+        return times, units 
 
     def __call__(self, data: FiringProbability) -> SpikeTrain:
         assert isinstance(data, FiringProbability)
-        # np.random.seed(123) # TODO remove after optimization
+        np.random.seed(123) # TODO remove after optimization
 
         stimuli = []
         for i in range(data.num_channels):
             stimuli.append(self._sample(data.channels[i], data.sample_rate))
         renewal_spikes = np.sum(np.array(stimuli,dtype=np.bool),axis=2) # We can do this because we use the same weight for all inputs
 
-        with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
-            lif_spike_times = workers.map(partial(self._lif, fs=data.sample_rate),
-                                       renewal_spikes)
-
-        times = []
-        units = []
-        for i,ts in enumerate(lif_spike_times):
-            if len(ts):
-                times.extend(ts)
-                units.append(i*np.ones(len(ts),dtype=int))
-        times = np.array(times,dtype=np.float)/data.sample_rate
-        units = np.concatenate(units)
-
-        # Here we sort the spikes in time
-        # TODO remove this sorting step when we have a clean vectorized implementation of _lif
-        idx = np.argsort(times)
-        times = times[idx]
-        units = units[idx]
+        times,units = self._lif(renewal_spikes, data.sample_rate)
 
         return SpikeTrain(times,units)
