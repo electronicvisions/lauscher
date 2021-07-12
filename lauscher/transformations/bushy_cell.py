@@ -22,7 +22,8 @@ class BushyCell(Transformation):
                  tau_syn: float = 5e-4,
                  tau_refrac: float = 1e-3,
                  weight: float = 13e3,
-                 compat_mode: bool = False ):
+                 compat_mode: bool = False,
+                 seed: int = None):
         # Signature is given by model parameters
         # pylint: disable=too-many-arguments
 
@@ -33,6 +34,8 @@ class BushyCell(Transformation):
         self.tau_refrac = tau_refrac
         self.weight = weight / float(self.n_convergence)
         self.compat_mode = compat_mode
+        if seed is not None:
+            np.random.seed(seed) 
 
     @staticmethod
     @numba.jit(nopython=True)
@@ -101,7 +104,6 @@ class BushyCell(Transformation):
 
     def __call__(self, data: FiringProbability) -> SpikeTrain:
         assert isinstance(data, FiringProbability)
-        np.random.seed(123) # TODO remove after optimization
 
         # Simulate renewal processes
         if self.compat_mode:
