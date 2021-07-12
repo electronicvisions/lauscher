@@ -21,7 +21,8 @@ class BushyCell(Transformation):
                  tau_mem: float = 1e-3,
                  tau_syn: float = 5e-4,
                  tau_refrac: float = 1e-3,
-                 weight: float = 13e3):
+                 weight: float = 13e3,
+                 compat_mode: bool = False ):
         # Signature is given by model parameters
         # pylint: disable=too-many-arguments
 
@@ -31,6 +32,7 @@ class BushyCell(Transformation):
         self.tau_syn = tau_syn
         self.tau_refrac = tau_refrac
         self.weight = weight / float(self.n_convergence)
+        self.compat_mode = compat_mode
 
     @staticmethod
     @numba.jit(nopython=True)
@@ -102,8 +104,7 @@ class BushyCell(Transformation):
         np.random.seed(123) # TODO remove after optimization
 
         # Simulate renewal processes
-        compat_mode = False
-        if compat_mode:
+        if self.compat_mode:
             renewal_spikes = np.empty(data.channels.shape, dtype=np.int)
             for i in range(data.num_channels):
                 renewal_spikes[i] = self._sample(data, i)
@@ -117,9 +118,8 @@ class BushyCell(Transformation):
             renewal_spikes = np.array(renewal_spikes)
      
         # Simulate LIF dynamics
-        chunk_size=100 # TODO tune this empirical parameter 
+        chunk_size=50 # TODO tune this empirical parameter 
         if data.num_channels>chunk_size:
-            print("Using chunked strategy")
             # Split work in chunks
             chunks = np.array_split(np.arange(data.num_channels), data.num_channels//chunk_size)
             with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
