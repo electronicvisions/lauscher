@@ -41,7 +41,7 @@ class HairCell(Transformation):
     
     @staticmethod
     @numba.jit(nopython=True)
-    def _dynamics(bm, fs, a, b, m, ymdt, xdt, ydt, rdt, gdt, hdt, lplusrdt, kt, hair_c, hair_q, hair_w):
+    def _dynamics(bm, a, b, m, ymdt, xdt, ydt, rdt, gdt, hdt, lplusrdt, kt, hair_c, hair_q, hair_w):
         hc = np.empty((bm.size))
         for j in range(bm.size):
             if (bm[j] + a) > 0:
@@ -86,7 +86,7 @@ class HairCell(Transformation):
         hair_w = hair_c * self.r / self.x
 
         # TODO find a nicer way of passing all these arguments to the dynamics function
-        kwargs = dict(fs=fs, a=self.a, b=self.b, m=self.m, ymdt=ymdt, xdt=xdt, ydt=ydt, rdt=rdt, gdt=gdt, hdt=hdt, lplusrdt=lplusrdt, kt=kt, hair_c=hair_c, hair_q=hair_q, hair_w=hair_w)
+        kwargs = dict(a=self.a, b=self.b, m=self.m, ymdt=ymdt, xdt=xdt, ydt=ydt, rdt=rdt, gdt=gdt, hdt=hdt, lplusrdt=lplusrdt, kt=kt, hair_c=hair_c, hair_q=hair_q, hair_w=hair_w)
         return self._dynamics(bm, **kwargs)
 
 
