@@ -42,9 +42,9 @@ Memory consumption might be huge for long audio files.
 ## License
 ```
 LAUSCHER - Flexbile Auditory Spike Conversion Chain
-Copyright (C) 2020 Benjamin Cramer
-                   Yannik Stradmann
-                   Koshika Yadava
+Copyright (C) 2020-2021 Benjamin Cramer
+                        Yannik Stradmann
+                        Koshika Yadava
 
 Contributors: Friedemann Zenke
 
