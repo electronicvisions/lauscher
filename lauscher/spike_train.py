@@ -10,21 +10,22 @@ from lauscher.abstract import Transformable, Exportable, Plottable
 
 
 class SpikeTrain(Transformable, Exportable, Plottable):
-    def __init__(self):
+    def __init__(self, times=None, units=None):
         super().__init__()
-        self._data = NotImplemented
+        self._times = times
+        self._units = units
 
     @property
     def spike_labels(self):
-        return self._data[1]
+        return self._units
 
     @property
     def spike_times(self):
-        return self._data[0]
+        return self._times
 
     def export(self, path: str):
         makedirs(Path(path).parent, exist_ok=True)
-        np.savez(path, self._data)
+        np.savez(path, times=self._times, units=self._units)
 
     def plot(self, axis: Axes):
         axis.plot(self.spike_times, self.spike_labels,
@@ -33,13 +34,3 @@ class SpikeTrain(Transformable, Exportable, Plottable):
         axis.set_xlabel("Time")
         axis.set_ylabel("Label")
 
-    @classmethod
-    def from_dense(cls, channel_time_matrix: np.ndarray,
-                   sample_rate: int) -> SpikeTrain:
-        spikes = np.array(np.where(channel_time_matrix.T), dtype=np.double)
-        spikes[0, :] = spikes[0, :] / sample_rate
-
-        result = cls()
-        result._data = spikes  # pylint: disable=protected-access
-
-        return result

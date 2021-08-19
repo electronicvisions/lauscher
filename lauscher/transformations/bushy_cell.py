@@ -4,6 +4,7 @@ from functools import partial
 from multiprocessing import Pool
 import numpy as np
 import numba
+from numpy.random import SeedSequence, default_rng
 
 from lauscher.abstract import Transformation
 from lauscher.firing_probability import FiringProbability
@@ -20,7 +21,9 @@ class BushyCell(Transformation):
                  tau_mem: float = 1e-3,
                  tau_syn: float = 5e-4,
                  tau_refrac: float = 1e-3,
-                 weight: float = 13e3):
+                 weight: float = 13e3,
+                 compat_mode: bool = False,
+                 seed: int = None):
         # Signature is given by model parameters
         # pylint: disable=too-many-arguments
 
@@ -30,6 +33,9 @@ class BushyCell(Transformation):
         self.tau_syn = tau_syn
         self.tau_refrac = tau_refrac
         self.weight = weight / float(self.n_convergence)
+        self.compat_mode = compat_mode
+        if seed is not None:
+            np.random.seed(seed) 
 
     @staticmethod
     @numba.jit(nopython=True)
@@ -42,53 +48,94 @@ class BushyCell(Transformation):
                         spikes[j, i] = 0
                     else:
                         last = j
+        # Alternative attempt, but slower 
+        # for t,j in np.argwhere(spikes):
+        #     end = min(t+refrac_samples,spikes.shape[0]-1)
+        #     spikes[t+1:end,j] = 0
         return spikes
 
-    def _sample(self, stimulus, fs):
-        spikes = np.random.rand(stimulus.size,
-                                self.n_convergence) < stimulus[:, None]
-        return self._correct(spikes, self.tau_refrac * fs)
+    def _sample(self, data, channel, rngs=None):
+        stimulus = data.channels[channel]
+        if rngs is None:
+            spikes = np.random.rand(stimulus.size, self.n_convergence) < stimulus[:, None]
+        else:
+            spikes = rngs[channel].random((stimulus.size, self.n_convergence)) < stimulus[:, None]
+        return np.sum(self._correct(spikes, self.tau_refrac * data.sample_rate), axis=1, dtype=np.float32)
 
-    def _lif(self, stimuli, fs):
-        dt = 1  / float(fs)
+    def _lif(self, stimuli, fs, indices=None):
+        dt = float(1.0/fs)
 
-        vm = np.zeros(stimuli.shape[0])
-        spikes = np.zeros(stimuli.shape[0])
-        isyn = np.zeros(stimuli.shape)
+        if indices is None:
+            indices = np.arange(len(stimuli))
+        stim = stimuli[indices]
+        
+        nb_cells = stim.shape[0]
+        refrac_counter = np.zeros(nb_cells)
+        vm = np.zeros(nb_cells)
+        isyn = np.zeros(nb_cells)
 
-        refrac_counter = 0
         n_refrac_samples = self.tau_refrac * fs
 
-        for step in range(stimuli.shape[0]):
-            if step > 0:
-                if refrac_counter <= 0:
-                    if vm[step - 1] < 1.0:
-                        vm[step] = vm[step - 1] * np.exp(-dt / self.tau_mem)
-                    else:
-                        refrac_counter = n_refrac_samples
-                        vm[step] = 0.0
-                        spikes[step - 1] = 1.0
-                isyn[step, :] = isyn[step - 1] * np.exp(-dt / self.tau_syn)
-            isyn[step, :] += stimuli[step, :]
-            if refrac_counter <= 0:
-                vm[step] += np.sum(isyn[step, :]) * self.weight * dt
-            if vm[step] > 1.0:
-                vm[step] = 1.0
+        scl_mem = np.exp(-dt / self.tau_mem)
+        scl_syn = np.exp(-dt / self.tau_syn)
 
+        times = [] 
+        units = [] 
+        for step in range(stim.shape[1]):
+            spiked = np.logical_and(vm>=1.0,refrac_counter<=0)
+            new_vm = vm * scl_mem
+            refrac_counter[spiked] = n_refrac_samples
+            new_vm[spiked] = 0.0
+            new_isyn = isyn * scl_syn + stim[:,step]
+            active = (refrac_counter <= 0)
+            new_vm[active] += new_isyn[active] * self.weight * dt
+            
+            vm = new_vm
+            isyn = new_isyn
             refrac_counter -= 1
 
-        return spikes
+            ids = np.where(spiked)[0]
+            if len(ids):
+                units.append( indices[ids] )
+                times.append(step/fs*np.ones(len(ids),dtype=np.int))
+
+        times, units = np.concatenate(times), np.concatenate(units)
+        return times, units 
 
     def __call__(self, data: FiringProbability) -> SpikeTrain:
         assert isinstance(data, FiringProbability)
 
-        stimuli = np.ndarray((data.num_channels, data.num_samples,
-                              self.n_convergence))
-        for i in range(data.num_channels):
-            stimuli[i] = self._sample(data.channels[i], data.sample_rate)
+        # Simulate renewal processes
+        if self.compat_mode:
+            renewal_spikes = np.empty(data.channels.shape, dtype=np.int)
+            for i in range(data.num_channels):
+                renewal_spikes[i] = self._sample(data, i)
+        else:
+            # using the parallel strategy here yields different results due to random number generation
+            ss = SeedSequence(np.random.randint(1e9))
+            child_seeds = ss.spawn(data.num_channels)
+            random_streams = [default_rng(s) for s in child_seeds]
+            with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
+                renewal_spikes = workers.map(partial(self._sample, data, rngs=random_streams), np.arange(data.num_channels) )
+            renewal_spikes = np.array(renewal_spikes)
+     
+        # Simulate LIF dynamics
+        chunk_size=50 # TODO tune this empirical parameter 
+        if data.num_channels>chunk_size:
+            # Split work in chunks
+            chunks = np.array_split(np.arange(data.num_channels), data.num_channels//chunk_size)
+            with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
+                results = workers.map(partial(self._lif, renewal_spikes, data.sample_rate), chunks)
 
-        with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
-            spike_matrix = workers.map(partial(self._lif, fs=data.sample_rate),
-                                       stimuli)
+            # combine results
+            times = np.concatenate([ ts for ts,us in results ])
+            units = np.concatenate([ us for ts,us in results ])
 
-        return SpikeTrain.from_dense(np.array(spike_matrix), data.sample_rate)
+            # sort spikes in time
+            idx = np.argsort(times)
+            times = times[idx]
+            units = units[idx]
+        else:
+            times,units = self._lif(renewal_spikes, data.sample_rate)
+
+        return SpikeTrain(times,units)

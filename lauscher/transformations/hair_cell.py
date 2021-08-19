@@ -2,6 +2,7 @@ from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
+import numba
 
 from lauscher.abstract import Transformation
 from lauscher.firing_probability import FiringProbability
@@ -34,7 +35,36 @@ class HairCell(Transformation):
         self.a = a
         self.b = b
         self.h = h
-        self.m = m
+        self.m = m 
+        # TODO Make all of these static variables
+
+    
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _dynamics(bm, a, b, m, ymdt, xdt, ydt, rdt, gdt, hdt, lplusrdt, kt, hair_c, hair_q, hair_w):
+        hc = np.empty((bm.size))
+        for j in range(bm.size):
+            if (bm[j] + a) > 0:
+                kt = gdt * (bm[j] + a) / (bm[j] + a + b)
+            else:
+                kt = 0.0
+
+            if hair_q < m:
+                replenish = ymdt - ydt * hair_q
+            else:
+                replenish = 0.0
+
+            eject = kt * hair_q
+            reuptakeandloss = lplusrdt * hair_c
+            reuptake = rdt * hair_c
+            reprocess = xdt * hair_w
+
+            hair_q = max(hair_q + replenish - eject + reprocess, 0)
+            hair_c = max(hair_c + eject - reuptakeandloss, 0)
+            hair_w = max(hair_w + reuptake - reprocess, 0)
+
+            hc[j] = hair_c * hdt
+        return hc
 
     def _meddis(self, bm, fs):
         # Equation length is given by the model.
@@ -55,29 +85,10 @@ class HairCell(Transformation):
         hair_q = hair_c * (self.l + self.r) / kt
         hair_w = hair_c * self.r / self.x
 
-        hc = np.zeros((bm.size))
-        for j in range(bm.size):
-            if (bm[j] + self.a) > 0:
-                kt = gdt * (bm[j] + self.a) / (bm[j] + self.a + self.b)
-            else:
-                kt = 0.0
+        # TODO find a nicer way of passing all these arguments to the dynamics function
+        kwargs = dict(a=self.a, b=self.b, m=self.m, ymdt=ymdt, xdt=xdt, ydt=ydt, rdt=rdt, gdt=gdt, hdt=hdt, lplusrdt=lplusrdt, kt=kt, hair_c=hair_c, hair_q=hair_q, hair_w=hair_w)
+        return self._dynamics(bm, **kwargs)
 
-            if hair_q < self.m:
-                replenish = ymdt - ydt * hair_q
-            else:
-                replenish = 0.0
-
-            eject = kt * hair_q
-            reuptakeandloss = lplusrdt * hair_c
-            reuptake = rdt * hair_c
-            reprocess = xdt * hair_w
-
-            hair_q = np.max([hair_q + replenish - eject + reprocess, 0])
-            hair_c = np.max([hair_c + eject - reuptakeandloss, 0])
-            hair_w = np.max([hair_w + reuptake - reprocess, 0])
-
-            hc[j] = hair_c * hdt
-        return hc
 
     def __call__(self, data: MembraneVelocity) -> FiringProbability:
         """
