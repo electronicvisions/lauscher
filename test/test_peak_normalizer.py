@@ -19,7 +19,7 @@ class TestPeakNormalizer(unittest.TestCase):
 
         # Normalize again
         sine_track = sine_track.transform(PeakNormalizer())
-        self.assertAlmostEqual(max(abs(sine_track.samples)), 1, places=1)
+        self.assertAlmostEqual(max(abs(sine_track.samples)), 1, places=1)  # pylint: disable=no-member
 
     def test_peak_from_above(self):
         sine_track = MonoAudioWave(np.sin(np.linspace(0, 1000, 10000)),
@@ -34,4 +34,4 @@ class TestPeakNormalizer(unittest.TestCase):
 
         # Normalize again
         sine_track = sine_track.transform(PeakNormalizer())
-        self.assertAlmostEqual(max(abs(sine_track.samples)), 1, places=1)
+        self.assertAlmostEqual(max(abs(sine_track.samples)), 1, places=1)  # pylint: disable=no-member

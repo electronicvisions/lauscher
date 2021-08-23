@@ -40,6 +40,6 @@ class SpikeTrain(Transformable, Exportable, Plottable):
         spikes[0, :] = spikes[0, :] / sample_rate
 
         result = cls()
-        result._data = spikes  # pylint: disable=protected-access
+        result._data = spikes
 
         return result

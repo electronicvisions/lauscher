@@ -13,9 +13,6 @@ class BasilarMembrane(Transformation):
     # Model parameters have well-defined short names
     # pylint: disable=invalid-name
 
-    # The best readable equation indentation differs from PEP8
-    # pylint: disable=bad-continuation
-
     def __init__(self,
                  channels: int = 700,
                  a: int = 3500,
