@@ -15,7 +15,7 @@ class TestRMSNormalizer(unittest.TestCase):
                                    44000)
 
         sine_track = sine_track.transform(RmsNormalizer(0.5))
-        self.assertAlmostEqual(rms(sine_track.samples), 0.5, places=1)
+        self.assertAlmostEqual(rms(sine_track.samples), 0.5, places=1)  # pylint: disable=no-member
 
     def test_peak_from_above(self):
         sine_track = MonoAudioWave(np.sin(np.linspace(0, 1000, 10000)),
@@ -23,4 +23,4 @@ class TestRMSNormalizer(unittest.TestCase):
 
         # Normalize to 3dB -> factor 2 amplitude increase
         sine_track = sine_track.transform(RmsNormalizer(2))
-        self.assertAlmostEqual(rms(sine_track.samples), 2, places=1)
+        self.assertAlmostEqual(rms(sine_track.samples), 2, places=1)  # pylint: disable=no-member

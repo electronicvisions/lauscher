@@ -22,7 +22,7 @@ class Singleton(type):
     """
     Metaclass for creating singletons.
     """
-    _INSTANCES = dict()
+    _INSTANCES = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._INSTANCES:

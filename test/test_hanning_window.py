@@ -12,5 +12,5 @@ class TestHanningWindow(unittest.TestCase):
 
         hanned = one_track.transform(HanningWindow())
 
-        for idx, value in enumerate(hanned.samples):
+        for idx, value in enumerate(hanned.samples):  # pylint: disable=no-member
             self.assertAlmostEqual(hanning(num_samples)[idx], value, places=2)
