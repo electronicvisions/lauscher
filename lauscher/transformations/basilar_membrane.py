@@ -19,7 +19,7 @@ class BasilarMembrane(Transformation):
                  alpha: float = 3.0,
                  rho: float = 1.0,
                  c: float = 3.5,
-                 c0: float = 10e7,
+                 c0: float = 10e8,
                  de: float = 0.15,
                  h: float = 0.1,
                  m: float = 0.05):
