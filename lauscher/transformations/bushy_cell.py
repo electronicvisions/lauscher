@@ -22,7 +22,6 @@ class BushyCell(Transformation):
                  tau_syn: float = 5e-4,
                  tau_refrac: float = 1e-3,
                  weight: float = 13e3,
-                 compat_mode: bool = False,
                  seed: int = None):
         # Signature is given by model parameters
         # pylint: disable=too-many-arguments
@@ -33,7 +32,6 @@ class BushyCell(Transformation):
         self.tau_syn = tau_syn
         self.tau_refrac = tau_refrac
         self.weight = weight / float(self.n_convergence)
-        self.compat_mode = compat_mode
         if seed is not None:
             np.random.seed(seed) 
 
@@ -106,18 +104,13 @@ class BushyCell(Transformation):
         assert isinstance(data, FiringProbability)
 
         # Simulate renewal processes
-        if self.compat_mode:
-            renewal_spikes = np.empty(data.channels.shape, dtype=np.int)
-            for i in range(data.num_channels):
-                renewal_spikes[i] = self._sample(data, i)
-        else:
-            # using the parallel strategy here yields different results due to random number generation
-            ss = SeedSequence(np.random.randint(1e9))
-            child_seeds = ss.spawn(data.num_channels)
-            random_streams = [default_rng(s) for s in child_seeds]
-            with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
-                renewal_spikes = workers.map(partial(self._sample, data, rngs=random_streams), np.arange(data.num_channels) )
-            renewal_spikes = np.array(renewal_spikes)
+        # Note that the parallel strategy here yields different results due to random number generation
+        ss = SeedSequence(np.random.randint(1e9))
+        child_seeds = ss.spawn(data.num_channels)
+        random_streams = [default_rng(s) for s in child_seeds]
+        with Pool(CommandLineArguments().num_concurrent_jobs) as workers:
+            renewal_spikes = workers.map(partial(self._sample, data, rngs=random_streams), np.arange(data.num_channels) )
+        renewal_spikes = np.array(renewal_spikes)
      
         # Simulate LIF dynamics
         chunk_size=50 # TODO tune this empirical parameter 
