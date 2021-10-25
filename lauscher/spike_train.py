@@ -16,7 +16,7 @@ class SpikeTrain(Transformable, Exportable, Plottable):
         self._units = units
 
     @property
-    def spike_labels(self):
+    def spike_units(self):
         return self._units
 
     @property
@@ -28,7 +28,7 @@ class SpikeTrain(Transformable, Exportable, Plottable):
         np.savez(path, times=self._times, units=self._units)
 
     def plot(self, axis: Axes):
-        axis.plot(self.spike_times, self.spike_labels,
+        axis.plot(self.spike_times, self.spike_units,
                   ls="none", marker=".", color="black")
 
         axis.set_xlabel("Time")
