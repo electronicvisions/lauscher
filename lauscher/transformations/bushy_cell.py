@@ -46,10 +46,6 @@ class BushyCell(Transformation):
                         spikes[j, i] = 0
                     else:
                         last = j
-        # Alternative attempt, but slower 
-        # for t,j in np.argwhere(spikes):
-        #     end = min(t+refrac_samples,spikes.shape[0]-1)
-        #     spikes[t+1:end,j] = 0
         return spikes
 
     def _sample(self, data, channel, rngs: Union[None, list]=None):
