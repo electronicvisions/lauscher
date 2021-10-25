@@ -52,7 +52,7 @@ class BushyCell(Transformation):
         #     spikes[t+1:end,j] = 0
         return spikes
 
-    def _sample(self, data, channel, rngs=None):
+    def _sample(self, data, channel, rngs: Union[None, list]=None):
         stimulus = data.channels[channel]
         if rngs is None:
             spikes = np.random.rand(stimulus.size, self.n_convergence) < stimulus[:, None]
