@@ -36,7 +36,6 @@ class HairCell(Transformation):
         self.b = b
         self.h = h
         self.m = m 
-        # TODO Make all of these static variables
 
     
     @staticmethod
