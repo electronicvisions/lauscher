@@ -10,7 +10,7 @@ from lauscher.abstract import Transformable, Exportable, Plottable
 
 
 class SpikeTrain(Transformable, Exportable, Plottable):
-    def __init__(self, times=None, units=None):
+    def __init__(self, times: Union[None,list,numpy.ndarray] = None, units:Union[None,list,numpy.ndarray] = None):
         super().__init__()
         self._times = times
         self._units = units
