@@ -24,7 +24,7 @@ def main(input_file: str,
     spikes.export(output_file)
 
 
-if __name__ == "__main__":
+def main_cli():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_file", type=str,
                         help="Path to the input wave file, to be converted to"
@@ -49,3 +49,7 @@ if __name__ == "__main__":
     global_args = CommandLineArguments()
     global_args.num_concurrent_jobs = args.jobs
     main(args.input_file, args.output_file, args.num_channels)
+
+
+if __name__ == "__main__":
+    main_cli()
