@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "lauscher"
+version = "1.0.0"
+description = "Transform audio waveforms into spike trains using a biologically-plausible cochlea model."
+readme = "Readme.md"
+license = "LGPL-2.1-only"
+authors = [
+    { name = "Benjamin Cramer", email = "benjamin.cramer@kip.uni-heidelberg.de" },
+    { name = "Yannik Stradmann", email = "yannik.stradmann@kip.uni-heidelberg.de" },
+    { name = "Friedemann Zenke", email = "friedemann.zenke@fmi.ch" },
+    { name = "Koshika Yadava", email = "koshika@stanford.edu" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "soundfile",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "numba"
+]
+
+[project.scripts]
+lauscher = "lauscher.__main__:main_cli"
+
+[project.urls]
+Homepage = "https://github.com/electronicvisions/lauscher"
+Repository = "https://github.com/electronicvisions/lauscher"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lauscher*"]
