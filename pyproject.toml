@@ -3,7 +3,7 @@ requires = ["setuptools"]
 
 [project]
 name = "lauscher"
-version = "1.0.0"
+version = "1.0.1"
 description = "Transform audio waveforms into spike trains using a biologically-plausible cochlea model."
 readme = "Readme.md"
 license = "LGPL-2.1-only"
@@ -13,7 +13,7 @@ authors = [
     { name = "Friedemann Zenke", email = "friedemann.zenke@fmi.ch" },
     { name = "Koshika Yadava", email = "koshika@stanford.edu" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.7"
 dependencies = [
     "soundfile",
     "numpy",
